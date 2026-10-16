@@ -1,11 +1,26 @@
-<div align="center">
+# X
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+On-device iOS customization toolkit.
 
-  <h1>Built with AI Studio</h2>
+## Current
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+- SwiftUI interface
+- On-device RPPairing host
+- Bonjour service advertisement
+- Developer Mode pairing flow
+- Persistent pairing record detection
+- SpringBoard tweak definitions
+- Local property-list payload generation
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+## SpringBoard
 
-</div>
+- Disable Low Battery Alerts
+- Hide AC Power on Lock Screen
+- Disable Lock After Respring
+- Disable Screen Dimming While Charging
+- Dynamic Island in Screenshots
+- Authentication Line
+- Disable Breadcrumbs
+- Show Supervision Text
+
+The pairing implementation follows the AirCard-iOS RPPairing integration. The AirLift binary framework is kept as an external build dependency.

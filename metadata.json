@@ -1,0 +1,8 @@
+{
+  "name": "X - iOS Customization Toolkit",
+  "description": "On-device iOS customization toolkit and SpringBoard tweak manager, RPPairing host controller, property list builder, and device simulator.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

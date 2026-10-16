@@ -1,0 +1,92 @@
+name: Build X unsigned IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "X/**"
+      - "rust-core/**"
+      - "AirliftFFI.xcframework/**"
+      - "project.yml"
+      - ".github/workflows/build-unsigned-ipa.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: xcode-27
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode and verify iOS SDK
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+          SDK_VERSION="$(xcrun --sdk iphoneos --show-sdk-version)"
+          SDK_MAJOR="${SDK_VERSION%%.*}"
+          if [ "$SDK_MAJOR" -lt 27 ]; then
+            echo "::error::This project targets iOS 27, but the selected Xcode provides iOS SDK ${SDK_VERSION}. Use the xcode-27 runner."
+            exit 1
+          fi
+
+      - name: Install Rust Toolchain for iOS
+        run: |
+          rustup target add aarch64-apple-ios aarch64-apple-ios-sim
+
+      - name: Compile Rust Core and Generate Framework
+        run: |
+          set -euo pipefail
+          export DEVELOPER_DIR="$(xcode-select -p)"
+          chmod +x build-ios.sh
+          ./build-ios.sh
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Verify required source dependencies
+        run: |
+          set -euo pipefail
+          if [ ! -d "AirliftFFI.xcframework" ]; then
+            echo "::error::AirliftFFI.xcframework is missing from the repository root. PairingController.swift imports AirliftFFI, so Swift cannot compile until the matching framework is supplied."
+            echo "Expected path: AirliftFFI.xcframework"
+            exit 1
+          fi
+          if [ ! -f "AirliftFFI.xcframework/Info.plist" ]; then
+            echo "::error::AirliftFFI.xcframework is present but its Info.plist is missing."
+            exit 1
+          fi
+
+      - name: Generate Xcode project
+        run: xcodegen generate --spec project.yml
+
+      - name: Build unsigned app
+        run: |
+          xcodebuild \
+            -project X.xcodeproj \
+            -scheme X \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package unsigned IPA
+        run: |
+          APP_PATH="build/DerivedData/Build/Products/Release-iphoneos/X.app"
+          test -d "$APP_PATH"
+          mkdir -p build/ipa/Payload
+          cp -R "$APP_PATH" build/ipa/Payload/X.app
+          ditto -c -k --sequesterRsrc --keepParent build/ipa/Payload build/X-unsigned.ipa
+          shasum -a 256 build/X-unsigned.ipa
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: X-unsigned-ipa
+          path: build/X-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 7
